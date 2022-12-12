@@ -31,6 +31,15 @@ cRTPClient::~cRTPClient()
 {
 
 }
+
+long get_timestamp()
+{
+    struct timeval tm;
+    gettimeofday(&tm, NULL);
+
+    return 1000 * tm.tv_sec + tm.tv_usec / 1000;
+}
+
 int cRTPClient::rtp_init(const char* serip)
 {
     serIp=strdup(serip);
@@ -132,6 +141,11 @@ int cRTPClient::rtp_getFrame(unsigned char *data, int len)
 }
 int cRTPClient::set_header_info(uint8_t* pHeader,RTP_PACK_HEADER_INFO* pHeaderInfo )
 {
+    static bool first_frame = false;
+    static long start = 0, end = 0;
+    static u_int16_t start_seq = 0;
+    static bool is_idr_frame = false;
+
 	if(pHeader == NULL || pHeaderInfo == NULL)
 	{
 		DEBUG_WARN("pram erro \n");
@@ -147,11 +161,39 @@ int cRTPClient::set_header_info(uint8_t* pHeader,RTP_PACK_HEADER_INFO* pHeaderIn
 	pHeaderInfo->marker = LEFT_CHAR_BIT_GET(pHeader+1,0,1);
 	pHeaderInfo->payloadType = LEFT_CHAR_BIT_GET(pHeader+1,1,7);
 
-	
-	pHeaderInfo->sequenceNumber = LITTLE_MAKE_UNINT16(pHeader+2);
-	pHeaderInfo->timeStamp = LITTLE_MAKE_UNINT32(pHeader+4);
-	pHeaderInfo->ssrc = LITTLE_MAKE_UNINT32(pHeader+8); 
-	DEBUG_INFO1("sequenceNumber %u timeStamp %u ssrc %u payloadType %d \n",pHeaderInfo->sequenceNumber,pHeaderInfo->timeStamp,pHeaderInfo->ssrc,pHeaderInfo->payloadType );
+    pHeaderInfo->sequenceNumber = LITTLE_MAKE_UNINT16(pHeader+2);
+    pHeaderInfo->timeStamp = LITTLE_MAKE_UNINT32(pHeader+4);
+    pHeaderInfo->ssrc = LITTLE_MAKE_UNINT32(pHeader+8);
+
+    if (0 == memcmp(pHeader + 12, "\x1c\x80\x00\x00\x01\x67\x64", 7)) {
+        is_idr_frame = true;
+    }
+
+    if (is_idr_frame) {
+        if (1 == pHeaderInfo->marker) {
+            end = get_timestamp();
+            first_frame = false;
+            is_idr_frame = false;
+        } else {
+            if (!first_frame) {
+                first_frame = true;
+                start = get_timestamp();
+                start_seq = pHeaderInfo->sequenceNumber;
+            }
+        }
+
+        if (1 == pHeaderInfo->marker) {
+            DEBUG_INFO1("frame delay=%ld|count=%d\n",
+                    end - start,
+                    pHeaderInfo->sequenceNumber - start_seq);
+        }
+    }
+//	DEBUG_INFO1("seq %u|timestamp diff=%d|local timestamp=%u|remote timeStamp=%u \n",
+//	        pHeaderInfo->sequenceNumber,
+//	        (int)(ts - pHeaderInfo->timeStamp),
+//	        ts,
+//	        pHeaderInfo->timeStamp);
+	//DEBUG_INFO1("sequenceNumber %u timeStamp %u ssrc %u payloadType %d \n",pHeaderInfo->sequenceNumber,pHeaderInfo->timeStamp,pHeaderInfo->ssrc,pHeaderInfo->payloadType );
 	return RET_SUCESS;
 }
 void cRTPClient::show_stream_info()

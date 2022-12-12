@@ -135,14 +135,15 @@ int cRTSPClient::rtsp_request(char* buffer, unsigned bufferSize,REQUEST_TYPE req
 		fwrite(buffer,1,bufferSize,fp_prot_log);
 	}
 	writeSocket(m_socket, buffer, bufferSize);
+	DEBUG_INFO3("sent:\n%s\n", buffer);
 
 	//需要在这里读，等待服务器的回应
 	#if 0 
 	//干脆不处理，假装已经成功了
 	sleep(1);
 	#else
-	ret = makeSocketBlocking(m_socket, 50);// 50 ms
-	int dataAll=0,count =5,dataRead=0;
+	ret = makeSocketBlocking(m_socket, 100);// 50 ms
+	int dataAll=0,count=10,dataRead=0;
 	//确保一次性读完，而不用在parse里面再读,所以这里干脆 no 多读几次
 	memset(m_rtsp_buffer,0,RTSP_BUFFER_LEN);
 	while(count--)
@@ -161,7 +162,7 @@ int cRTSPClient::rtsp_request(char* buffer, unsigned bufferSize,REQUEST_TYPE req
 		fwrite(m_rtsp_buffer,1,dataAll,fp_prot_log);
 		//fflush(fp_prot_log);
 	}
-	
+	DEBUG_INFO1("recv:\n%s\n", m_rtsp_buffer);
 	ret = pr.parse(m_rtsp_buffer, dataAll, request,m_cseq,NULL);
 	m_cseq ++;
 
@@ -207,6 +208,8 @@ int cRTSPClient::request_describe()
 		pr.add_line_cmd(buf, strlen(buf));
 		snprintf(buf,sizeof(buf),"CSeq:%d",m_cseq);
 		pr.add_line_cmd(buf, strlen(buf));
+		snprintf(buf,sizeof(buf),"Accept: application/sdp");
+		pr.add_line_cmd(buf, strlen(buf));
 	}while(0);pr.end_cmd();
 	if(RET_SUCESS == rtsp_request(pr.mSendbuf,pr.mSendOffset,REQUEST_DESCRIBE))
 	{
@@ -236,7 +239,7 @@ int cRTSPClient::request_setup()
 	char buf[256];
 	pr.begain_cmd();do{
 		//only  setup video
-		snprintf(buf,sizeof(buf),"SETUP %s %s",pr.pREPLY.pScribe.media[0].fControlPath,"RTSP/1.0");
+		snprintf(buf,sizeof(buf),"SETUP %s/%s %s", mUrl, pr.pREPLY.pScribe.media[0].fControlPath,"RTSP/1.0");
 		pr.add_line_cmd(buf, strlen(buf));
 		snprintf(buf,sizeof(buf),"CSeq:%d",m_cseq);
 		pr.add_line_cmd(buf, strlen(buf));
@@ -266,6 +269,9 @@ int cRTSPClient::request_play()
 	rtsp_request(buf,sizeof(buf)-1,REQUEST_PLAY);
 #else
 	char buf[256];
+	struct timeval tm;
+	gettimeofday(&tm, NULL);
+
 	pr.begain_cmd();do{
 		snprintf(buf,sizeof(buf),"PLAY %s %s",mUrl,"RTSP/1.0");
 		pr.add_line_cmd(buf, strlen(buf));

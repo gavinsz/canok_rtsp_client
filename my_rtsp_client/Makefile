@@ -1,5 +1,6 @@
 #there was a bug, if you change any *.h , please make clean firtly
 
+#CROSS_COMPILE = /home/gavinliang/work/gcc-linaro-6.3.1-2017.05-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
 CROSS_COMPILE =
 CC = $(CROSS_COMPILE)gcc
 CXX= $(CROSS_COMPILE)g++
@@ -14,7 +15,7 @@ INCLUDE_PATH += -I.
 
 
 LINK_PATH += -L. 
-LFLAGS += -lpthread 
+LFLAGS += -lpthread  -static
 
 
 RELEASE_DIR := Release

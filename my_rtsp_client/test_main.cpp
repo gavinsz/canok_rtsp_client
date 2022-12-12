@@ -32,18 +32,25 @@ int main(int argc, const char *argv[])
 	{
 		client->api_init(argv[1]);
 	}
-	
-	int count = 300;
-	while(count--)
-	{
-		int index =client->api_requestFrameBuffer(&pdata, &dataLen);
-		if(index >= 0)
-		{
-			fwrite(nal,1,sizeof(nal),fp_out);
-			fwrite(pdata,1,dataLen,fp_out);
-			client->api_releaseBuffer(index);
-		}
-	}
+
+    while (1) {
+        int index =client->api_requestFrameBuffer(&pdata, &dataLen);
+        if(index >= 0) {
+            client->api_releaseBuffer(index);
+        }
+    }
+
+//	int count = 300;
+//	while(count--)
+//	{
+//		int index =client->api_requestFrameBuffer(&pdata, &dataLen);
+//		if(index >= 0)
+//		{
+//			fwrite(nal,1,sizeof(nal),fp_out);
+//			fwrite(pdata,1,dataLen,fp_out);
+//			client->api_releaseBuffer(index);
+//		}
+//	}
 	fclose(fp_out);
 	client->api_deinit();
 	delete client;

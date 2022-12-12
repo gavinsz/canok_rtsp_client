@@ -99,8 +99,7 @@ int udp_get_port(int socket, int16_t *port)
   }
   
   DEBUG_INFO3("GETCLIENT_UDP_PORT test.sin_port %d \n",test.sin_port);
-  //*port = ntohs(test.sin_port);
-  *port = test.sin_port;
+  *port = (int16_t)ntohs(test.sin_port);
   DEBUG_INFO3("GETCLIENT_UDP_PORT *port %d \n",*port);
   return RET_SUCESS;
 }
